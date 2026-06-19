@@ -1,74 +1,138 @@
-# VDT-AGPReID
-View-decoupled Transformer for Person Re-identification under Aerial-ground Camera Network (CVPR'24) [[paper_link]](https://arxiv.org/abs/2403.14513)
+# QVAM: Query-guided View-aware Adaptive Modulation for Aerial-Ground Person Re-Identification
 
+This repository is the official implementation of the paper **"QVAM: Query-guided View-aware Adaptive Modulation for Aerial-Ground Person Re-Identification"** (ECCV 2026 Submission, Paper ID #1275).
 
-## [1] Dataset: CARGO
-![CARGO](CARGO.jpg)
-### Introduction
-* CARGO is a large-scale aerial-ground person re-identification (AGPReID) dataset, which captured from a synthesized scene in Unity3D.
-* CARGO contains 13 cameras (8 ground and 5 aerial cameras), 5000 person IDs, and 108563 person images.
-* **Camera 1 $\sim$ 5 belong to aerial cameras, and Camera 6 $\sim$ 13 belong to ground cameras.**
-* In the aerial camera area, two different drone roaming strategies are designed according to the size of the surveillance area. For the small area (left area), we deploy one drone with a $90^\circ$ overhead view, allowing it to move counterclockwise around each street. For a large area (right area), we deploy individual drones on each of the four streets with a $45^\circ\sim60^\circ$ tilt view, allowing them to move back and forth on corresponding streets. 
-* Dataset Link: [Google Drive](https://drive.google.com/file/d/1yDjyH0VtW7efxP3vgQjIqTx2oafCB67t/view?usp=drive_link)
+[![Paper](https://img.shields.io/badge/Paper-Arxiv-red)](https://arxiv.org/) <!-- Replace with actual link when available -->
+[![Code](https://img.shields.io/badge/Code-GitHub-blue)](https://github.com/) 
 
-### Setting
-* We split CARGO into the train (51,451 images with 2500 IDs) and test sets (51,024 images with the remaining 2500 IDs) with an almost 1:1 ratio.
-* **Testing Protocol 1 (ALL)** uses full test data and labels, which focuses on the comprehensive retrieval performance.
-* **Testing Protocol 2 (G $\leftrightarrow$ G)** only retains the data under the ground camera in the test set (60 query IDs with 134 images, 2404 gallery IDs with 18,444 images).
-* **Testing Protocol 3 (A $\leftrightarrow$ A)** only retains the data under the aerial camera in the test set (89 query IDs with 178 images, 2447 gallery IDs with 32,268 images).
-* **Testing Protocol 4 (A $\leftrightarrow$ G)** relabels the original test set into two domains (aerial and ground domain) based on the camera label.
-* The training set of all testing protocols retains same.
+---
 
-### Annotation
-Annotations are preserved in the name of each image by the format ``camID_time_personID_index.jpg''. 
+## 1. Introduction
 
-> For example, ``Cam2_day_2519_320.jpg'' means that:
-> * Camera id is 2, and it belongs to the aerial view.
-> * Capture time is day. (day or night)
-> * Person id is 2519.
-> * Index is 320. (It has no practical meaning for you.)
+Aerial-Ground Person Re-Identification (AGPReID) matches pedestrian identities across aerial (UAV) and ground cameras. However, it suffers from severe viewpoint gaps. Existing approaches often rely on coarse binary view labels (aerial vs. ground) and rigid orthogonal constraints, which oversimplify continuous viewpoint variations (such as altitude and depression-angle shifts) and might suppress identity-discriminative details.
 
-### License
-* The datasets can only be used for ACADEMIC PURPOSES. NO COMERCIAL USE is allowed.
-* Copyright © Sun Yat-sen University. All rights reserved.
+To mitigate these issues, we propose **Query-guided View-aware Adaptive Modulation (QVAM)**:
+* **View-aware Decoder (VAD):** Employs learnable view queries to extract fine-grained, continuous viewpoint cues from local patch tokens, bypassing the limitations of binary domain supervision.
+* **Adaptive Feature Modulation (AFM):** Generates query-conditioned channel-wise modulation masks to adapt the global `[CLS]` token, suppressing viewpoint-biased responses while preserving identity-discriminative details.
+* **Cross-View Prototype Alignment (CVPA) Loss:** Aligns modulated features across aerial and ground views at both the batch level and global level using dual-view memory banks.
 
-## [2] Method: View-decoupled Transformer
-![VDT](VDT.png)
-### Requirements
-#### Step1: Prepare enviorments
-Please refer to [INSTALL.md](./INSTALL.md).
+<p align="center">
+  <img src="motivation1.png" alt="Challenges and Concept" width="90%"/>
+  <br>
+  <em>Figure 1: Comparison between previous rigid disentanglement methods and our proposed adaptive modulation strategy (QVAM).</em>
+</p>
 
-#### Step2: Prepare datasets
-Download the CARGO dataset and modify the dataset path.
-Line 22, 60, 100 and 140 in  [cargo.py](./fastreid/data/datasets/cargo.py) .
-> self.data_dir = XXX
+---
 
-#### Step3: Prepare ViT Pre-trained Models
-Download the ViT-base Pre-trained model and modify the path. Line 11 in [VDT.yml](./configs/CARGO/VDT.yml):
-> PRETRAIN_PATH: XXX
+## 2. Method Overview
 
-### Training & Testing
-Training VDT on the CARGO dataset with one GPU:
+<p align="center">
+  <img src="qvam1.png" alt="QVAM Architecture" width="100%"/>
+  <br>
+  <em>Figure 2: The pipeline of the proposed QVAM framework. It consists of (a) Vision Transformer backbone, (b) View-aware Decoder (VAD), (c) Adaptive Feature Modulation (AFM) module, and (d) Cross-View Prototype Alignment (CVPA).</em>
+</p>
+
+---
+
+## 3. Main Empirical Results
+
+Our method achieves competitive performance across three representative AGPReID benchmarks: **CARGO**, **AG-ReID**, and **AG-ReIDv2**.
+
+### Performance on CARGO
+| Method | Protocol 1 (ALL) Rank-1 / mAP | Protocol 2 ($A \leftrightarrow G$) Rank-1 / mAP | Protocol 3 ($A \leftrightarrow A$) Rank-1 / mAP | Protocol 4 ($G \leftrightarrow G$) Rank-1 / mAP |
+| :--- | :---: | :---: | :---: | :---: |
+| ViT | 61.54 / 53.54 | 43.13 / 40.11 | 80.00 / 64.47 | 82.14 / 71.34 |
+| VDT | 64.10 / 55.20 | 48.12 / 42.76 | 82.50 / 66.83 | 82.14 / 71.59 |
+| SeCap | 68.59 / 60.19 | 69.43 / 58.94 | 80.00 / 68.08 | 86.61 / 75.42 |
+| **QVAM (Ours)** | **78.85 / 71.02** | **72.50 / 64.41** | **85.00 / 79.63** | **91.07 / 82.62** |
+
+### Performance on AG-ReID & AG-ReIDv2
+* **AG-ReID:** Reaches **85.53%** Rank-1 / **76.81%** mAP on $A \rightarrow G$, and **88.46%** Rank-1 / **80.52%** mAP on $G \rightarrow A$.
+* **AG-ReIDv2:** Consistently improves retrieval quality across all protocols, e.g., achieving **82.29%** mAP on $A \rightarrow C$ and **85.15%** mAP on $A \rightarrow W$.
+
+---
+
+## 4. Requirements & Preparation
+
+Our implementation is based on the [fast-reid](https://github.com/JDAI-CV/fast-reid) codebase.
+
+### Step 1: Environment Setup
+Please refer to [INSTALL.md](./INSTALL.md) to install the required dependencies (such as PyTorch, torchvision, etc.).
+
+### Step 2: Dataset Preparation
+1. Download the datasets (**CARGO**, **AG-ReID**, or **AG-ReIDv2**).
+2. Configure your local dataset paths in the corresponding dataset loader files. For example, for the CARGO dataset, modify:
+   ```python
+   # In fastreid/data/datasets/cargo.py
+   self.data_dir = "YOUR_DATASET_PATH/CARGO"
+   ```
+
+### Step 3: Prepare Pre-trained Models
+Download the ImageNet-pretrained ViT-B/16 backbone and update the path in your configuration files:
+```yaml
+# In configs/CARGO/qvam.yml (or configs/AG-ReID/qvam.yml)
+MODEL:
+  BACKBONE:
+    PRETRAIN_PATH: "YOUR_PRETRAIN_PATH/vit_base_patch16_226.pth"
 ```
-CUDA_VISIBLE_DEVICES=0 python3 tools/train_net.py --config-file ./configs/CARGO/VDT.yml MODEL.DEVICE "cuda:0"
+
+---
+
+## 5. Training & Evaluation
+
+### Training
+To train QVAM on CARGO with a single GPU:
+```bash
+CUDA_VISIBLE_DEVICES=0 python3 tools/train_net.py --config-file ./configs/CARGO/QVAM.yml
 ```
 
-Testing VDT on the CARGO dataset:
-```
-CUDA_VISIBLE_DEVICES=1 python3 tools/train_net.py --config-file ./configs/CARGO/VDT.yml --eval-only MODEL.WEIGHTS your_model_pth_path MODEL.DEVICE "cuda:0"
+To train with multiple GPUs:
+```bash
+CUDA_VISIBLE_DEVICES=0,1 python3 tools/train_net.py --config-file ./configs/CARGO/QVAM.yml --num-gpus 2
 ```
 
-### Acknowledgement
-Codebase from [fast-reid](https://github.com/JDAI-CV/fast-reid). So please refer to that repository for more usage.
-
-## [3] Citation
-If you find this code useful for your research, please kindly cite the following papers:
+### Evaluation
+To evaluate a trained model checkpoint:
+```bash
+CUDA_VISIBLE_DEVICES=0 python3 tools/train_net.py --config-file ./configs/CARGO/qvam.yml --eval-only MODEL.WEIGHTS "path/to/your_checkpoint.pth"
 ```
-@InProceedings{Zhang_2024_CVPR,
-    author    = {Zhang, Quan and Wang, Lei and Patel, Vishal M. and Xie, Xiaohua and Lai, Jian-Huang},
-    title     = {View-decoupled Transformer for Person Re-identification under Aerial-ground Camera Network},
-    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-    year      = {2024}
+
+---
+
+## 6. Qualitative Visualizations
+
+### Query-to-Patch Attention
+As shown below, despite the absence of explicit spatial supervision, our learnable queries adaptively focus on salient human body parts across both aerial and ground views.
+
+<p align="center">
+  <img src="heat_map.png" alt="VAD Attention Maps" width="90%"/>
+  <br>
+  <em>Figure 3: Visualization of VAD query-to-patch attention maps for different identities.</em>
+</p>
+
+### Feature Distribution (t-SNE)
+t-SNE visualizations illustrate that QVAM successfully aligns features from different views of the same identity into compact clusters, mitigating the extreme cross-view domain gap.
+
+<p align="center">
+  <img src="tSNE.png" alt="t-SNE Comparison" width="80%"/>
+  <br>
+  <em>Figure 4: t-SNE distribution comparing the ViT baseline and our QVAM.</em>
+</p>
+
+---
+
+## 7. Citation
+
+If you find this work or codebase helpful in your research, please consider citing:
+
+```bibtex
+@InProceedings{QVAM_ECCV2026,
+    author    = {Anonymous},
+    title     = {QVAM: Query-guided View-aware Adaptive Modulation for Aerial-Ground Person Re-Identification},
+    booktitle = {Submission to European Conference on Computer Vision (ECCV)},
+    year      = {2026}
 }
 ```
-If you have any question, please feel free to contact me. E-mail: zhangq48@mail2.sysu.edu.cn
+
+## Acknowledgement
+This repository is built upon [fast-reid](https://github.com/JDAI-CV/fast-reid). We thank the authors for their excellent codebase.
