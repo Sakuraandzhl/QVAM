@@ -1,0 +1,96 @@
+SEED: 238974
+MODEL:
+  META_ARCHITECTURE: Baseline_multiview_resnet
+  BACKBONE:
+    NAME: build_resnet_backbone
+    DEPTH: 50x
+    FEAT_DIM: 2048
+    PRETRAIN: True
+    PRETRAIN_PATH: /mnt/sda/sakura/Pretranied_Model/ResNet/resnet50/resnet50-19c8e357.pth
+    LAST_STRIDE: 1
+    WITH_IBN: False
+    WITH_SE: False
+    WITH_NL: False
+  QVAM:
+    NAME: build_QVAM
+    NUM_HEADS: 8
+    NUM_PROMPTS: 4
+    MOMENTUM: 0.9
+    IS_RUN: True
+    VAD_IS_RUN: True
+    MLP_RATIO: 4.
+    CVPA_LAMBDA: 0.0001
+    VIEW_LAMBDA: 0.
+    VAD_LAYER: 1
+    AFM_LAYER: 1
+    BINARIZE_LAMBDA: 1.
+    DIVERSITY_LAMBDA: 0.01
+    MARGIN_ALIGN: 0.
+    MARGIN_DISTINCT: 0.5
+    VIEW_CLS: False
+    PROMPTS_VIEW_CLS: False
+    PROMPTS_VIEW_CLS_LAMBDA: 0.
+  HEADS:
+    NAME: EmbeddingHead
+    NORM: BN
+    WITH_BNNECK: True
+    POOL_LAYER: Identity
+    NECK_FEAT: before
+    CLS_LAYER: Linear
+    NUM_CLASSES: 807
+    VIEW_CLASSES: 2
+  LOSSES:
+    NAME: ("CrossEntropyLoss", "TripletLoss",)
+    CE:
+      EPSILON: 0.
+      SCALE: 1.
+      ALPHA: 0.2
+    TRI:
+      MARGIN: 0.0
+      HARD_MINING: True
+      NORM_FEAT: False
+      SCALE: 1.
+
+INPUT:
+  SIZE_TRAIN: [256, 128]
+  SIZE_TEST: [256, 128]
+  REA:
+    ENABLED: True
+    PROB: 0.5
+  FLIP:
+    ENABLED: True
+  PADDING:
+    ENABLED: True
+
+DATALOADER:
+  SAMPLER_TRAIN: NaiveIdentitySampler
+  NUM_INSTANCE: 6
+  NUM_WORKERS: 8
+
+SOLVER:
+  AMP:
+    ENABLED: True
+  OPT: SGD
+  MAX_EPOCH: 150
+  BASE_LR: 0.001
+  WEIGHT_DECAY: 0.0001
+  IMS_PER_BATCH: 144
+  SCHED: CosineAnnealingLR
+  ETA_MIN_LR: 0.0000016
+  WARMUP_FACTOR: 0.01
+  WARMUP_ITERS: 2000
+  CLIP_GRADIENTS:
+    ENABLED: True
+  CHECKPOINT_PERIOD: 5
+
+TEST:
+  EVAL_PERIOD: 5
+  IMS_PER_BATCH: 512
+  METRIC: euclidean #euclidean cosine
+
+CUDNN_BENCHMARK: True
+
+DATASETS:
+  NAMES: ("AG_ReID_v2",)
+  TESTS: ("AG_ReID_v2", "AG_ReID_v2_G2A","AG_ReID_v2_A2W","AG_ReID_v2_W2A")
+OUTPUT_DIR: logs/AGReIDv2/qvam

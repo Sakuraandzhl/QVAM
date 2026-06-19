@@ -1,0 +1,28 @@
+# python
+__pycache__/
+*.pyc
+
+# pytorch
+*.pth
+*.pt
+
+# logs
+logs/
+output/
+
+# vscode
+.vscode/
+
+# dataset
+datasets/
+data/
+
+# cache
+.cache/
+
+# conda
+env/
+venv/
+
+# tensorboard
+runs/
